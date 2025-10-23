@@ -67,14 +67,30 @@ pagos.mensuales.gasolina
 
 #Obtenemos los promedios
 prom.pagos.mensuales.electricos <- mean(pagos.mensuales.electricos)
-prom.pagos.mensuales.electricos
-
 prom.pagos.mensuales.gasolina <- mean(pagos.mensuales.gasolina)
+
+
+prom.pagos.mensuales.electricos
 prom.pagos.mensuales.gasolina
 
+#De lo anterior se puede ver cómo el adquirir un vehículo eléctrico
+#representa un menor gasto mensual en el pago del crédito del vehículo
 
+#Se importan librerías más pesadas para manejar data más pesada
 
+library(tidyverse)
+library(readxl)
+library(readr)
 
+#De esta base de datos de RECOPE se puede extraer los precios
+#históricos de la gasolina súper 
+
+datos.gasolina <- read_excel("data/PRECIOS-HISTORICOS-CONSUMIDOR-FINAL.xls")
+View(PRECIOS_HISTORICOS_CONSUMIDOR_FINAL)
+
+precio.super <- datos.gasolina$...5
+
+precio.super
 
 
 
