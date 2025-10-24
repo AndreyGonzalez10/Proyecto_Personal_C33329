@@ -151,7 +151,8 @@ df.dataframe.electricos <- df.dataframe.electricos %>%
 #a gasolina 
 
 df.dataframe.gasolina <- df.dataframe.gasolina %>%
-  mutate(capacidad.litros = case_when(
+  mutate(
+    capacidad.litros = case_when(
     modelo.gasolina == "Toyota RAV4" ~ 55,
     modelo.gasolina == "Nissan Frontier" ~ 80,
     modelo.gasolina == "Toyota Hilux" ~ 80,
@@ -176,18 +177,6 @@ df.dataframe.electricos %>% ggplot(
 
 cor(df.dataframe.electricos$Precio, df.dataframe.electricos$autonomia_km)
 #La correlación es despreciable
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
