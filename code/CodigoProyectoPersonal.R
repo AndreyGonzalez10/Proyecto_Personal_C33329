@@ -7,7 +7,7 @@
 
 df.dataframe.electricos <- data.frame(
   
-  "Modelo" = modelo <-  c("GEELY GEOMETRY E", " BYD YUAN S1 PRO",
+  "Modelo" = modelo <-  c("GEELY GEOMETRY E", "BYD YUAN S1 PRO",
                           "BYD SEAGULL","CHERY EQ7", "BYD YUAN PLUS", 
                           "CHERY ICAR 03","VOLVO EX30","JAC EJS4"),
   "Precio" = precio <- c(22900, 29990, 21990, 34990, 
@@ -82,6 +82,67 @@ library(tidyverse)
 library(readxl)
 library(readr)
 
+#Resulta importante conocer el consumo eléctrico de los autos, 
+#nos basaremos en las tarifas del ICE Residencial 
+
+#Costo fijo en colones
+costo.fijo.ICE <- 1348.35
+
+#Costo por kwH en colones en el rango 0-140 (todos los autos lo cumplen)
+costo.kwh <- 65.97
+
+#Ahora se busca la capacidad de cada batería de cada auto de nuestra lista
+#y se agrega como una nueva columna en el df original de eléctricos
+
+df.dataframe.electricos <- df.dataframe.electricos %>%
+  mutate(
+    capacidad.bateria = case_when(
+    modelo == "GEELY GEOMETRY E" ~ 39.4,
+    modelo == "BYD YUAN S1 PRO" ~ 45.12,
+    modelo == "BYD SEAGULL" ~ 38.88,      
+    modelo == "CHERY EQ7" ~ 67.12,
+    modelo == "BYD YUAN PLUS" ~ 60.48,     
+    modelo == "CHERY ICAR 03" ~ 69.7,      
+    modelo == "VOLVO EX30" ~ 69.0,         
+    modelo == "JAC EJS4" ~ 55.0,
+    TRUE ~ NA_real_
+  ))
+  
+View(df.dataframe.electricos)
+
+#Se hace ahora una nueva columna con el costo de cargar el auto 
+#con las tarifas residenciales del ICE
+
+costo.carga <- function(vector){
+  resultado = costo.fijo.ICE + vector*65.97
+  return (resultado)
+}
+
+df.dataframe.electricos <- df.dataframe.electricos %>% mutate(
+  pago.carga = costo.carga(capacidad.bateria)
+) 
+
+View(df.dataframe.electricos)
+
+
+#Se corrige el error que se pusieron dos columnas con capacidad 
+#de la batería
+
+df.dataframe.electricos <- df.dataframe.electricos %>% select(-capacidad_bateria)
+
+
+View(df.dataframe.electricos)
+
+
+
+
+
+
+
+
+
+
+
 #De esta base de datos de RECOPE se puede extraer los precios
 #históricos de la gasolina súper 
 
@@ -90,7 +151,34 @@ View(PRECIOS_HISTORICOS_CONSUMIDOR_FINAL)
 
 precio.super <- datos.gasolina$...5
 
-precio.super
+
+#Tómense los datos de precios de gasolina super de setiembre del 2020
+#a setiembre del 2025 (5 años), no nos interesa el precio hace 10 o 20 años
+precio.super.recientes <- precio.super[352:435]
+
+#Se nota que los datos numéricos están como tipo string, por lo que pasan
+
+precio.super.recientes <- as.integer(precio.super.recientes)
+
+typeof(precio.super.recientes)
+
+#Acá revisando la data se nota como en el año 2022 el precio
+#de la gasolina estuvo por los cielos, por lo que se quitarán esos outilers
+
+remover.outliers <- function(x) {
+  iqr <- IQR(x)
+  q <- quantile(x, c(0.25, 0.75))
+  x[x >= (q[1] - 1.5 * iqr) & x <= (q[2] + 1.5 * iqr)]
+}
+
+#Acá ya se le quitan los outliers al vector de los precios del super
+
+precio.super.recientes <- remover.outliers(precio.super.recientes)
+
+precio.super.recientes
+
+mean(precio.super.recientes)
+
 
 
 
