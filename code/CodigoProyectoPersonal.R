@@ -81,6 +81,7 @@ prom.pagos.mensuales.gasolina
 library(tidyverse)
 library(readxl)
 library(readr)
+library(ggplot2)
 
 #Resulta importante conocer el consumo eléctrico de los autos, 
 #nos basaremos en las tarifas del ICE Residencial 
@@ -130,8 +131,55 @@ View(df.dataframe.electricos)
 
 df.dataframe.electricos <- df.dataframe.electricos %>% select(-capacidad_bateria)
 
+#Se añade una columna con la autonomía de los carros eléctricos
+#que también es importante para el análisis
 
-View(df.dataframe.electricos)
+df.dataframe.electricos <- df.dataframe.electricos %>%
+  mutate(autonomia.km = case_when(
+    modelo == "GEELY GEOMETRY E" ~ 380,
+    modelo == "BYD YUAN S1 PRO" ~ 401,
+    modelo == "BYD SEAGULL" ~ 405,
+    modelo == "CHERY EQ7" ~ 512,
+    modelo == "BYD YUAN PLUS" ~ 480,
+    modelo == "CHERY ICAR 03" ~ 501,
+    modelo == "VOLVO EX30" ~ 476,
+    modelo == "JAC EJS4" ~ 385,
+    TRUE ~ NA_real_
+  ))
+
+#Ahora se incluye la capacidad en litros de gasolina de los carros
+#a gasolina 
+
+df.dataframe.gasolina <- df.dataframe.gasolina %>%
+  mutate(capacidad.litros = case_when(
+    modelo.gasolina == "Toyota RAV4" ~ 55,
+    modelo.gasolina == "Nissan Frontier" ~ 80,
+    modelo.gasolina == "Toyota Hilux" ~ 80,
+    modelo.gasolina == "Suzuki Vitara" ~ 47,
+    modelo.gasolina == "Chery Tiggo 2" ~ 50,
+    modelo.gasolina == "Toyota Raize" ~ 36,
+    modelo.gasolina == "Suzuki Jimny" ~ 40,
+    modelo.gasolina == "Toyota Yaris Cross" ~ 42,
+    TRUE ~ NA_real_
+  ))
+
+View(df.dataframe.gasolina)
+
+
+#Algunos gráficos interesantes por el momento 
+
+#Autonomía con precio, tendrán relación?
+
+df.dataframe.electricos %>% ggplot(
+  aes(x=autonomia_km, y=Precio))+
+    geom_smooth(se=FALSE)
+
+cor(df.dataframe.electricos$Precio, df.dataframe.electricos$autonomia_km)
+#La correlación es despreciable
+
+
+
+
 
 
 
