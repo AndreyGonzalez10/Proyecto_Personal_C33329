@@ -3,7 +3,7 @@
 #personal en su totalidad
 
 #Primero se crean los dataframes con los autos eléctricos más vendidos
-#en Costa Rica
+#en Costa Rica, 
 
 df.dataframe.electricos <- data.frame(
   
@@ -23,7 +23,6 @@ df.dataframe.electricos <- data.frame(
 
 
 View(df.dataframe.electricos)
-
 
 
 df.dataframe.gasolina <- data.frame (
@@ -216,6 +215,22 @@ precio.super.recientes
 
 mean(precio.super.recientes)
 
+#Consulta con Andrey: 
 
+#Métodos de ARIMA 
 
+# library(forecast)
+# 
+# serie <- ts(precio.super.recientes, start = c(2000, 1), frequency = 12)
+# view(serie)
+# modelo <- auto.arima(serie)
+# 
+# summary(modelo)
+# 
+# pronostico <- forecast(modelo, 48, level = 95)
+# 
+# pronostico
+
+# Busque pruebas de hipotesis de estacionareidad ADF, KPSS y PP
+# Aplicar transofrmacion diff() o diff(log())
 
