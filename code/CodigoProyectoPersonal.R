@@ -3,7 +3,7 @@
 #personal en su totalidad
 
 #Primero se crean los dataframes con los autos eléctricos más vendidos
-#en Costa Rica, 
+#en Costa Rica
 
 df.dataframe.electricos <- data.frame(
   
@@ -165,72 +165,114 @@ df.dataframe.gasolina <- df.dataframe.gasolina %>%
 
 View(df.dataframe.gasolina)
 
+#Se importan los datos necesarios para el tipo de cambio y los precios de la gasolina
 
-#Algunos gráficos interesantes por el momento 
+library(readxl)
+library(dplyr)
+library(stringr)
+library(lubridate)
+library(readr)
 
-#Autonomía con precio, tendrán relación?
+datos.dolar.1 <- read_csv("data/Datos históricos USD_CRC (2).csv")
+View(Datos_históricos_USD_CRC_2_)
 
-df.dataframe.electricos %>% ggplot(
-  aes(x=autonomia_km, y=Precio))+
-    geom_smooth(se=FALSE)
+#Se obtiene con coma y todo ya bien separado dividiendo entre 100
 
-cor(df.dataframe.electricos$Precio, df.dataframe.electricos$autonomia_km)
-#La correlación es despreciable
+datos.dolar <- datos.dolar.1[,2]/100 #Esto para corregir 
 
+#Se pasa el vector a un dataframe
 
-
-#De esta base de datos de RECOPE se puede extraer los precios
-#históricos de la gasolina súper 
-
-datos.gasolina <- read_excel("data/PRECIOS-HISTORICOS-CONSUMIDOR-FINAL.xls")
-View(PRECIOS_HISTORICOS_CONSUMIDOR_FINAL)
-
-precio.super <- datos.gasolina$...5
+datos.dolar <- as.data.frame(datos.dolar)
 
 
-#Tómense los datos de precios de gasolina super de setiembre del 2020
-#a setiembre del 2025 (5 años), no nos interesa el precio hace 10 o 20 años
-precio.super.recientes <- precio.super[352:435]
+#Ahora si se procederá a hacer el modelo ARIMA para poder proyectar
+#el tipo de cambio en el plazo de los 96 meses del crédito y los 
+#precios de la gasolina. Información tomada de RPUBS. Link: https://rpubs.com/stefens07/Arima
 
-#Se nota que los datos numéricos están como tipo string, por lo que pasan
 
-precio.super.recientes <- as.integer(precio.super.recientes)
 
-typeof(precio.super.recientes)
+#Se importan las librerías necesarias y se instalan los paquetes 
 
-#Acá revisando la data se nota como en el año 2022 el precio
-#de la gasolina estuvo por los cielos, por lo que se quitarán esos outilers
+library(forecast) #contiene el modelo ARIMA
+library(tseries) #contiene contenido de series de tiempo
+library(TSA) #para series de tiempo
+library(urca) #para el test para comprobar estacionariedad
+library (ggplot2) #para graficar
+library(stats) #para pruebas de estadística
+library(seasonal) #para la serie ajustada de estacionalidad
 
-remover.outliers <- function(x) {
-  iqr <- IQR(x)
-  q <- quantile(x, c(0.25, 0.75))
-  x[x >= (q[1] - 1.5 * iqr) & x <= (q[2] + 1.5 * iqr)]
-}
 
-#Acá ya se le quitan los outliers al vector de los precios del super
+#Se hace datos.dolar como una serie de tiempo
 
-precio.super.recientes <- remover.outliers(precio.super.recientes)
+serie.dolar <- ts(datos.dolar$Último, start=c(2015,3), frequency = 12)
 
-precio.super.recientes
 
-mean(precio.super.recientes)
 
-#Consulta con Andrey: 
+#Se grafica el tipo de cambio por 10 años
 
-#Métodos de ARIMA 
+autoplot(serie.dolar, frequency=12, xlab="Años", ylab="USD/CRC",main="Figura1. Tipo de Cambio")
 
-# library(forecast)
-# 
-# serie <- ts(precio.super.recientes, start = c(2000, 1), frequency = 12)
-# view(serie)
-# modelo <- auto.arima(serie)
-# 
-# summary(modelo)
-# 
-# pronostico <- forecast(modelo, 48, level = 95)
-# 
-# pronostico
+#Ahora vamos a "descomponer" la información del tipo de cambio
 
-# Busque pruebas de hipotesis de estacionareidad ADF, KPSS y PP
-# Aplicar transofrmacion diff() o diff(log())
+dolar.decom <- decompose(serie.dolar)
+
+par(mfrow=c(2,2))
+
+plot(dolar.decom$x, main="Tipo de cambio original", col = "black", ylab="Serie de tiempo")
+plot(dolar.decom$trend, main="Tendencia", col="blue",ylab="Valores")
+plot(dolar.decom$seasonal, main="Estacionalidad", col="red",ylab="Valores")
+plot(dolar.decom$random, main = "Irregularidad", col="green", ylab="Valores")
+
+
+#Aplicación del modelo ARIMA
+
+#Para usar ARIMA, la serie de tiempo debe ser estacionaria, por
+#lo que se le aplica la prueba de Dickey-Fuller
+
+adf.test(serie.dolar) #con esto se ve que la serie NO es estacionaria
+
+#Se saca la serie ajustada por estacionalidad
+
+dolar.SA <- seasadj(dolar.decom)
+
+#Se grafican ambas para comparar el comportamiento
+
+plot(serie.dolar, main = "Figura 3. Tipo de cambio original y desestacionalizada")
+lines(dolar.SA, col = "red")
+legend("topleft", legend = c("Serie original", "Serie desestacionalizada"), col = c("black", "red"), lty = 1)
+
+# Se diferencia la serie para poder hacerla estacionaria
+
+dolarSA.d1 <- diff(serie.dolar,differences = 1)
+
+adf.test(dolarSA.d1)
+
+#En este caso bastó con únicamente haberla diferenciado una vez
+#y ya tira que es estacionaria
+
+#Ahora falta tomar los valores p y q del ARIMA, los cuales se obtienen
+#con la función de autocorrelación(ACF) y autocorrelación parcial (PACF)
+
+par(mfrow= c(1,1))
+
+acf(dolarSA.d1, main="Figura 4. Función de autocorrelación TDC diferenciado")
+
+pacf(dolarSA.d1, main="Figura 5. Función de autocorrelación parcial TDC diferenciado")
+
+#Después de 1000 pruebas se escoge el modelo ARIMA (0,1,3) ya que el residuo es ruido blanco
+    
+Modelo.arima <-  Arima(dolar.SA, order = c(0,1,3))
+Box.test(Modelo.arima$residuals, lag=20, type="Ljung-Box")
+
+shapiro.test(Modelo.arima$residuals)
+
+#¡¡¡CORREGIR!!!
+
+#Pronóstico
+
+
+Pronostico96 <- forecast(Modelo.arima, level = c(90),h=96)
+plot(Pronostico96)
+
+Pronostico96
 
