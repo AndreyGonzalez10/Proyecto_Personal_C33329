@@ -268,11 +268,12 @@ shapiro.test(Modelo.arima$residuals)
 
 #¡¡¡CORREGIR!!!
 
-#Pronóstico
+#Pronóstico 
 
-
-Pronostico96 <- forecast(Modelo.arima, level = c(90),h=96)
+Pronostico96 <- forecast(Modelo.arima, level = c(90), h=96)
 plot(Pronostico96)
 
 Pronostico96
+
+
 
