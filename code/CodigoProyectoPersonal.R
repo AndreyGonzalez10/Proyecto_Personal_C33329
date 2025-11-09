@@ -190,7 +190,6 @@ datos.dolar <- as.data.frame(datos.dolar)
 #precios de la gasolina. Información tomada de RPUBS. Link: https://rpubs.com/stefens07/Arima
 
 
-
 #Se importan las librerías necesarias y se instalan los paquetes 
 
 library(forecast) #contiene el modelo ARIMA
@@ -205,7 +204,6 @@ library(seasonal) #para la serie ajustada de estacionalidad
 #Se hace datos.dolar como una serie de tiempo
 
 serie.dolar <- ts(datos.dolar$Último, start=c(2015,3), frequency = 12)
-
 
 
 #Se grafica el tipo de cambio por 10 años
@@ -231,21 +229,11 @@ plot(dolar.decom$random, main = "Irregularidad", col="green", ylab="Valores")
 
 adf.test(serie.dolar) #con esto se ve que la serie NO es estacionaria
 
-#Se saca la serie ajustada por estacionalidad
-
-dolar.SA <- seasadj(dolar.decom)
-
-#Se grafican ambas para comparar el comportamiento
-
-plot(serie.dolar, main = "Figura 3. Tipo de cambio original y desestacionalizada")
-lines(dolar.SA, col = "red")
-legend("topleft", legend = c("Serie original", "Serie desestacionalizada"), col = c("black", "red"), lty = 1)
-
 # Se diferencia la serie para poder hacerla estacionaria
 
-dolarSA.d1 <- diff(serie.dolar,differences = 1)
-
-adf.test(dolarSA.d1)
+dolar.d1 <- diff(serie.dolar,differences = 1)
+dolar.d1 <- ts(dolar.d1, frequency=12)
+adf.test(dolar.d1)
 
 #En este caso bastó con únicamente haberla diferenciado una vez
 #y ya tira que es estacionaria
@@ -255,25 +243,27 @@ adf.test(dolarSA.d1)
 
 par(mfrow= c(1,1))
 
-acf(dolarSA.d1, main="Figura 4. Función de autocorrelación TDC diferenciado")
+acf(dolar.d1,lag.max = 120, main="Figura 4. Función de autocorrelación TDC diferenciado")
+pacf(dolar.d1, main="Figura 5. Función de autocorrelación parcial TDC diferenciado")
 
-pacf(dolarSA.d1, main="Figura 5. Función de autocorrelación parcial TDC diferenciado")
 
 #Después de 1000 pruebas se escoge el modelo ARIMA (0,1,3) ya que el residuo es ruido blanco
     
-Modelo.arima <-  Arima(dolar.SA, order = c(0,1,3))
-Box.test(Modelo.arima$residuals, lag=20, type="Ljung-Box")
+Modelo.arima <-  Arima(serie.dolar, order = c(1,1,1))
+
+Box.test(Modelo.arima$residuals, lag=120, type="Ljung-Box")
 
 shapiro.test(Modelo.arima$residuals)
 
-#¡¡¡CORREGIR!!!
 
 #Pronóstico 
 
-Pronostico96 <- forecast(Modelo.arima, level = c(90), h=96)
+Pronostico96 <- forecast(Modelo.arima, level = c(80), h=96)
 plot(Pronostico96)
 
 Pronostico96
+
+
 
 
 
