@@ -4,6 +4,7 @@
 
 #Primero se crean los dataframes con los autos eléctricos más vendidos
 #en Costa Rica
+library(dplyr)
 
 df.dataframe.electricos <- data.frame(
   
@@ -20,7 +21,6 @@ df.dataframe.electricos <- data.frame(
   "Pago mensual ($)" = pagos.mensuales.electricos
 
 )
-
 
 View(df.dataframe.electricos)
 
@@ -43,6 +43,8 @@ df.dataframe.gasolina <- data.frame (
 )
 
 View(df.dataframe.gasolina)
+
+
 
 #Ahora con teoría del interés podemos crear una función de tal manera
 #que según el plazo (96 meses), la deuda y la tasa de interés, podemos 
@@ -146,6 +148,8 @@ df.dataframe.electricos <- df.dataframe.electricos %>%
     TRUE ~ NA_real_
   ))
 
+View(df.dataframe.electricos)
+
 #Ahora se incluye la capacidad en litros de gasolina de los carros
 #a gasolina 
 
@@ -165,6 +169,29 @@ df.dataframe.gasolina <- df.dataframe.gasolina %>%
 
 View(df.dataframe.gasolina)
 
+#Cuantas veces es necesario cargar el carro, suponiendo un uso promedio de 1200 km mensuales
+
+df.dataframe.electricos <- df.dataframe.electricos %>% mutate(
+  cargas.por.mes = 1200/autonomia.km
+)
+
+View(df.dataframe.electricos)
+
+
+#Costo por cargas mensuales
+
+df.dataframe.electricos <- df.dataframe.electricos %>% 
+  mutate(
+    carga.mensual = pago.carga*cargas.por.mes
+  )
+
+View(df.dataframe.electricos)
+
+
+
+
+
+
 #Se importan los datos necesarios para el tipo de cambio y los precios de la gasolina
 
 library(readxl)
@@ -183,7 +210,7 @@ datos.dolar <- datos.dolar.1[,2]/100 #Esto para corregir
 #Se pasa el vector a un dataframe
 
 datos.dolar <- as.data.frame(datos.dolar)
-
+View(datos.dolar)
 
 #Ahora si se procederá a hacer el modelo ARIMA para poder proyectar
 #el tipo de cambio en el plazo de los 96 meses del crédito y los 
@@ -208,7 +235,7 @@ serie.dolar <- ts(datos.dolar$Último, start=c(2015,3), frequency = 12)
 
 #Se grafica el tipo de cambio por 10 años
 
-autoplot(serie.dolar, frequency=12, xlab="Años", ylab="USD/CRC",main="Figura1. Tipo de Cambio")
+autoplot(serie.dolar, frequency=12, xlab="Años", ylab="USD/CRC",main="Figura 1. Tipo de Cambio")
 
 #Ahora vamos a "descomponer" la información del tipo de cambio
 
@@ -244,24 +271,61 @@ adf.test(dolar.d1)
 par(mfrow= c(1,1))
 
 acf(dolar.d1,lag.max = 120, main="Figura 4. Función de autocorrelación TDC diferenciado")
-pacf(dolar.d1, main="Figura 5. Función de autocorrelación parcial TDC diferenciado")
+pacf(dolar.d1,lag.max = 120, main="Figura 5. Función de autocorrelación parcial TDC diferenciado")
 
 
 #Después de 1000 pruebas se escoge el modelo ARIMA (0,1,3) ya que el residuo es ruido blanco
     
-Modelo.arima <-  Arima(serie.dolar, order = c(1,1,1))
+auto.arima(serie.dolar)
 
-Box.test(Modelo.arima$residuals, lag=120, type="Ljung-Box")
+Modelo.arima <-  Arima(serie.dolar, order = c(1,1,2), include.drift = TRUE)
+
+Box.test(Modelo.arima$residuals, lag=20, type="Ljung-Box")
 
 shapiro.test(Modelo.arima$residuals)
 
 
 #Pronóstico 
 
-Pronostico96 <- forecast(Modelo.arima, level = c(80), h=96)
-plot(Pronostico96)
+#El “drift” (deriva) agrega una tendencia promedio al pronóstico, haciendo que crezca o disminuya suavemente en lugar de ser plano.
 
-Pronostico96
+pronostico96 <- forecast(Modelo.arima, level = c(90), h=96)
+
+plot(pronostico96)
+
+pronostico96
+
+#Ahora que sabemos el tipo de cambio, se puede proyectar cuanto pagará la persona en su crédito en colones
+
+pronostico.tc.df <- as.data.frame(pronostico96)
+View(pronostico.tc.df)
+
+#Obtenemos el promedio del tipo de cambio pronosticado y lo que se pagará en colones
+
+mean(pronostico.tc.df$`Point Forecast`)
+
+df.dataframe.electricos <- df.dataframe.electricos %>% mutate(
+  pago.credito = Pago.mensual....*mean(pronostico.tc.df$`Point Forecast`)
+)
+
+#Ahora se saca la última columna que será el gasto total mensual
+
+df.dataframe.electricos <- df.dataframe.electricos %>% mutate(
+  gasto.total.mensual = pago.credito+carga.mensual
+)
+
+#Por último el salario recomendado según expertos 
+#https://www.investopedia.com/how-much-should-i-spend-on-a-car-5187853
+
+df.dataframe.electricos <- df.dataframe.electricos %>% 
+  mutate(
+    ingresos.necesarios = gasto.total.mensual/0.2
+  )
+
+View(df.dataframe.electricos)
+
+
+#Ahora se hace exactamente lo mismo pero ahora necesitamos predecir la gasolina
 
 
 
