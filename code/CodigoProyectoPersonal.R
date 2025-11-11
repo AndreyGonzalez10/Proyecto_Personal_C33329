@@ -327,6 +327,111 @@ View(df.dataframe.electricos)
 
 #Ahora se hace exactamente lo mismo pero ahora necesitamos predecir la gasolina
 
+library(lubridate)
+library(readxl)
+library(dplyr)
+library(stringr)
+
+df.precios.gasolina <- read_excel("data/PreciosImportantes.xlsx")
+
+df.precios.gasolina <- df.precios.gasolina %>%
+  mutate(Fecha.de.cambio = 
+           dmy(str_replace_all(df.precios.gasolina$Fecha, 
+c("DE " = "", "DEL " = "", "ENERO" = "01", "FEBRERO" = "02", "MARZO" = "03",
+"ABRIL" = "04", "MAYO" = "05", "JUNIO" = "06", "JULIO" = "07", "AGOSTO" = "08",
+"SETIEMBRE" = "09", "SEPTIEMBRE" = "09", "OCTUBRE" = "10", "NOVIEMBRE" = "11",
+"DICIEMBRE" = "12"))))
+
+View(df.precios.gasolina)
+
+df.precios.gasolina <- df.precios.gasolina %>% select(
+  Fecha.de.cambio, Final
+)
+
+View(df.precios.gasolina)
+
+#Verificar que sea tipo fecha
+
+df.precios.gasolina <- df.precios.gasolina %>%
+  mutate(Fecha.de.cambio = as.Date(Fecha.de.cambio))
+
+df.precios.gasolina <- df.precios.gasolina %>%
+  mutate(Mes = floor_date(Fecha.de.cambio, unit = "month"))
+
+# Calcular diferencia con el primer día del mes
+df.precios.gasolina <- df.precios.gasolina %>%
+  mutate(dias.desde.inicio = abs(day(Fecha.de.cambio) - 1))
+
+# Para cada mes, seleccionar la fila con menor diferencia
+resultado <- df.precios.gasolina %>%
+  group_by(Mes) %>%
+  slice_min(order_by = dias.desde.inicio, n = 1) %>%
+  ungroup() %>%
+  select(Fecha.de.cambio, Final)
+
+# Mostrar resultado
+
+precios.gasolina.mensual <- as.data.frame(resultado)
+
+View(precios.gasolina.mensual)
+
+# Ahora si se procede a hacer lo mismo del ARIMA pero ahora con la gasolina para tomar un promedio de las proyecciones
+
+serie.gasolina <- ts(precios.gasolina.mensual$Final, start(2015,3),frequency = 12)
+
+autoplot(serie.gasolina, frequency=12, xlab="Años",ylab="Precio", main = "Figura 7. Precio Gasolina Super")
+
+gasolina.descompuesta <- decompose(serie.gasolina)
+
+par(mfrow=c(2,2))
+
+plot(gasolina.descompuesta$x, main="Precios originales",col="black",ylab="Serie de tiempo")
+plot(gasolina.descompuesta$trend, main="Tendencia",col="blue",ylab="Valores")
+plot(gasolina.descompuesta$seasonal, main="Estacionalidad",col="red",ylab="Valores")
+plot(gasolina.descompuesta$random, main="Irregularidad",col="green",ylab="Valores")
+
+#Prueba de Dickey-Fuller
+
+adf.test(serie.gasolina) #no es estacionaria
+
+seried1.gasolina <- diff(serie.gasolina, differences = 1)
+
+adf.test(seried1.gasolina)#Ahora si
+
+#Lo mismo para determinar p y q
+
+par(mfrow=c(1,1))
+
+acf(seried1.gasolina, main="Figura 8. Función de autocorrelación -Gasolina diferenciada")
+pacf(seried1.gasolina, main="Figura 9. Función de autocorrelación parcial -Gasolina diferenciada")
+
+#Veamos cual recomienda el auto.arima
+
+auto.arima(serie.gasolina)
+
+Arima.gasolina <- Arima(serie.gasolina, order = c(0,1,0), include.drift = TRUE)
+Pronostico.gasolina <- forecast(Arima.gasolina, level=c(95),h=120)
+
+Pronostico.gasolina
+
+#Se hace un df para ver mejor los datos
+
+df.pronostico.gasolina <- as.data.frame(Pronostico.gasolina)
+View(df.pronostico.gasolina)
+
+#Se obtiene el promedio
+
+promedio.futuro.gasolina <- mean(df.pronostico.gasolina$`Point Forecast`)
+promedio.futuro.gasolina
+
+#Ahora se rellena el data frame con la info recolectada
+
+
+View(df.dataframe.gasolina)
+
+df.dataframe.gasolina <- df.dataframe.gasolina %>% select(-gasolina.mensual)
+
+View(df.dataframe.gasolina)
 
 
 
