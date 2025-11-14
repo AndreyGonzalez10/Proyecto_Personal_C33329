@@ -116,7 +116,7 @@ View(df.dataframe.electricos)
 #con las tarifas residenciales del ICE
 
 costo.carga <- function(vector){
-  resultado = costo.fijo.ICE + vector*65.97
+  resultado = costo.fijo.ICE + vector*costo.kwh
   return (resultado)
 }
 
@@ -130,7 +130,7 @@ View(df.dataframe.electricos)
 #Se corrige el error que se pusieron dos columnas con capacidad 
 #de la batería
 
-df.dataframe.electricos <- df.dataframe.electricos %>% select(-capacidad_bateria)
+df.dataframe.electricos <- df.dataframe.electricos %>% select(-capacidad.bateria)
 
 #Se añade una columna con la autonomía de los carros eléctricos
 #que también es importante para el análisis
@@ -187,10 +187,20 @@ df.dataframe.electricos <- df.dataframe.electricos %>%
 
 View(df.dataframe.electricos)
 
+#Se ve la autonomía (kilometraje en este caso) por cada tanque lleno
 
+df.dataframe.gasolina <- df.dataframe.gasolina %>% 
+  mutate(
+  kilometraje = capacidad.litros*8  
+)
 
+#Se calcula cuantas veces habría que llenar el tanque 
 
+df.dataframe.gasolina <- df.dataframe.gasolina %>% mutate(
+  rellenos = 1200/kilometraje
+)
 
+View(df.dataframe.gasolina)
 
 #Se importan los datos necesarios para el tipo de cambio y los precios de la gasolina
 
@@ -274,6 +284,7 @@ acf(dolar.d1,lag.max = 120, main="Figura 4. Función de autocorrelación TDC dif
 pacf(dolar.d1,lag.max = 120, main="Figura 5. Función de autocorrelación parcial TDC diferenciado")
 
 
+
 #Después de 1000 pruebas se escoge el modelo ARIMA (0,1,3) ya que el residuo es ruido blanco
     
 auto.arima(serie.dolar)
@@ -290,39 +301,9 @@ shapiro.test(Modelo.arima$residuals)
 #El “drift” (deriva) agrega una tendencia promedio al pronóstico, haciendo que crezca o disminuya suavemente en lugar de ser plano.
 
 pronostico96 <- forecast(Modelo.arima, level = c(90), h=96)
-
 plot(pronostico96)
 
 pronostico96
-
-#Ahora que sabemos el tipo de cambio, se puede proyectar cuanto pagará la persona en su crédito en colones
-
-pronostico.tc.df <- as.data.frame(pronostico96)
-View(pronostico.tc.df)
-
-#Obtenemos el promedio del tipo de cambio pronosticado y lo que se pagará en colones
-
-mean(pronostico.tc.df$`Point Forecast`)
-
-df.dataframe.electricos <- df.dataframe.electricos %>% mutate(
-  pago.credito = Pago.mensual....*mean(pronostico.tc.df$`Point Forecast`)
-)
-
-#Ahora se saca la última columna que será el gasto total mensual
-
-df.dataframe.electricos <- df.dataframe.electricos %>% mutate(
-  gasto.total.mensual = pago.credito+carga.mensual
-)
-
-#Por último el salario recomendado según expertos 
-#https://www.investopedia.com/how-much-should-i-spend-on-a-car-5187853
-
-df.dataframe.electricos <- df.dataframe.electricos %>% 
-  mutate(
-    ingresos.necesarios = gasto.total.mensual/0.2
-  )
-
-View(df.dataframe.electricos)
 
 
 #Ahora se hace exactamente lo mismo pero ahora necesitamos predecir la gasolina
@@ -410,7 +391,11 @@ pacf(seried1.gasolina, main="Figura 9. Función de autocorrelación parcial -Gas
 auto.arima(serie.gasolina)
 
 Arima.gasolina <- Arima(serie.gasolina, order = c(0,1,0), include.drift = TRUE)
-Pronostico.gasolina <- forecast(Arima.gasolina, level=c(95),h=120)
+
+Box.test(Arima.gasolina$residuals, lag=20, type="Ljung-Box")
+
+Pronostico.gasolina <- forecast(Arima.gasolina, level=c(95), h=96)
+plot(Pronostico.gasolina)
 
 Pronostico.gasolina
 
@@ -424,15 +409,61 @@ View(df.pronostico.gasolina)
 promedio.futuro.gasolina <- mean(df.pronostico.gasolina$`Point Forecast`)
 promedio.futuro.gasolina
 
-#Ahora se rellena el data frame con la info recolectada
+#Se obtiene el gasto por gasolina
 
+df.dataframe.gasolina <- df.dataframe.gasolina %>% mutate(
+  pago.por.gasolina = promedio.futuro.gasolina*capacidad.litros*rellenos
+)
 
 View(df.dataframe.gasolina)
 
-df.dataframe.gasolina <- df.dataframe.gasolina %>% select(-gasolina.mensual)
 
+#Ahora que sabemos el tipo de cambio, se puede proyectar cuanto pagará la persona en su crédito en colones
+
+pronostico.tc.df <- as.data.frame(pronostico96)
+
+#Obtenemos el promedio del tipo de cambio pronosticado y lo que se pagará en colones
+
+promedio.tdc <- mean(pronostico.tc.df$`Point Forecast`)
+
+
+df.dataframe.electricos <- df.dataframe.electricos %>% mutate(
+  pago.credito = Pago.mensual....*promedio.tdc
+)
+
+df.dataframe.gasolina <- df.dataframe.gasolina %>% mutate(
+  pago.credito = Pago.mensual....*promedio.tdc
+)
+
+
+#Ahora se saca la última columna que será el gasto total mensual
+
+df.dataframe.electricos <- df.dataframe.electricos %>% mutate(
+  gasto.total.mensual = pago.credito+carga.mensual
+)
+
+df.dataframe.gasolina <- df.dataframe.gasolina %>% mutate(
+  gasto.total.mensual = pago.credito+pago.por.gasolina
+)
+
+
+
+
+#Por último el salario recomendado según expertos (el objetivo de la investigación)
+#https://www.investopedia.com/how-much-should-i-spend-on-a-car-5187853
+
+df.dataframe.electricos <- df.dataframe.electricos %>% 
+  mutate(
+    ingresos.necesarios = gasto.total.mensual/0.2
+  )
+
+df.dataframe.gasolina <- df.dataframe.gasolina %>% 
+  mutate(
+    ingresos.necesarios = gasto.total.mensual/0.2
+  )
+
+
+View(df.dataframe.electricos)
 View(df.dataframe.gasolina)
-
-
 
 
