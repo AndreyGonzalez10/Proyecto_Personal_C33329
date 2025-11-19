@@ -1,0 +1,210 @@
+---
+title: ""
+format:
+  pdf:
+    engine: xelatex
+    documentclass: article
+    fontsize: 12pt
+header-includes:
+  - \usepackage{setspace}
+  - \usepackage{titling}
+  - \usepackage{indentfirst}
+  - \setlength{\parindent}{15pt}
+  - \usepackage{graphicx}
+---
+
+\begin{center}
+{\LARGE \bfseries Movilización financieramente responsable \par}
+
+\vspace{0.5cm}
+
+
+{\large
+Andrey Fabricio González Bastos C33329\\
+
+\par}
+
+\vspace{0.5cm}
+
+\textit{
+Ciencias Actuariales, Escuela de Matemática, Universidad de Costa Rica.\\
+San José, Costa Rica. Noviembre, 2025
+}
+
+\vspace{0.6cm}
+
+\begin{tabular}{ccc}
+\texttt{andrey.gonzalezbastos@ucr.ac.cr} 
+\end{tabular}
+
+\end{center}
+
+\vspace{0.7cm}
+\hrule
+\vspace{0.8cm}
+
+\section {Introducción}
+\indent El presente proyecto nace de la urgencia de divulgar la educación financiera en Costa Rica ante la toma de decisiones cruciales en la vida personal de un individuo como lo es el adquirir un automóvil. En Costa Rica el automóvil es símbolo de estatus social, la población se siente representada en su automóvil y esto las hace tomar pésimas decisiones a la hora de ir al mercado a buscar un auto nuevo.En la actualidad Costa Rica presenta un colapso vial notable por la gran cantidad de autos nuevos que ingresan a las calles todos los días, esto debido a las tentadoras facilidades para obtener un crédito de auto hoy en día, en el mercado hay decenas de entidades financieras compitiendo por colocar préstamos en el mercado y sacarles el mayor interés posible sin pensar en el equilibrio financiero de la población. 
+
+Este trabajo presenta la realidad de los ingresos necesarios que necesitaría un costarricense para poder adquirir los ocho autos eléctricos y los ocho carros a gasolina más comprados en el país. Estos ingresos se obtienen para poder comparar estos mismos con el salario medio reportado a la CCSS para poder averiguar si el costarricense está tomando conscientes respecto a su dinero o si por el contrario se deja llevar por la tentación de los créditos de autos. 
+
+\section {Metodología}
+\indent Primero se crearon dos data frames, uno para eléctricos y otro para gasolina, cada uno con modelo, precio, prima (asumir 20%) al menos según Creditea(2025), deuda y un pago mensual que se calcula con una función que emula la calculadora de crédito virtual que posee el BN en su página web. La función de esta es traer todas las cuotas a valor presente y con series geométricas y fórmulas de teoría del interés, se despeja el valor de cada cuota según el plazo y la tasa, en este caso de 96 meses y 10,70%. Se decidió esta tasa del BN ya que es la única tasa fija en todo el período, ya que otras entidades ofrecen tasas variables con la Tasa Básica Pasiva después de cierto tiempo del crédito, lo que termina afecatando al usuario ya que solo sube su tasa de interés, además de complicar los cálculos en el presente proyecto.
+
+Luego, se sacaron más columnas, como el costo de carga, pago de la carga, cargas por mes y el precio de la carga mensual. La capacidad de la batería y la autonomía se buscaron en fichas técnicas y fueron añadiadas con un case when. Estos costos se hicieron en base a documentos oficiales de las tarifas eléctricas residenciales del ICE, la cual incluye un costo fijo de 1348.45 colones y 65.97 colones por cada kwH.
+
+Para los de gasolina se añadió con información de fichas técnicas su capacidad en litros con un case when para luego poder calcular más columnas de interés como el kilometraje y los rellenos. Acá se consultaron datos en foros para poder asumir un consumo de 8 km/L y de 1200 km recorridos mensuales. 
+
+Para proyectar el tipo de cambio y los precios de la gasolina se usó el modelo ARIMA. Según RPUBS(2023), se necesitan librerías como forecast que contiene el modelo arima, la tseries que contiene las series de tiempo, la TSA igual para series de tiempo, urca para poder hacer test de estacionariedad, ggplot2 para graficar, stats y stational para pruebas de estadística como la del ruido blanco que garantiza que los residuos sean aleatorios y no se relacionen.
+
+Se hizo el tipo de cambio como una serie de tiempo, se descompone y obtienen gráficos con información de la serie. Para poder aplicar el arima se necesita que la serie sea estacionaria, es decir que tenga media y varianza constante, no puede ser creciente ni decreciente. 
+Se le aplica la prueba de Dickey-Fuller que comprueba estacionariedad, se necesita que el valor de p sea menor a 0.05 y como no la pasó. Cuando esto sucede, el paso a seguir es diferenciar la serie, es decir al n-ésimo término se le resta el n-1 término y así hasta construir una nueva serie de tiempo, por lo general basta con diferenciar de una a dos veces para lograr la estacionariedad. Una vez lograda la estacionariedad, se deben encontrar los parámetros p y q del modelo arima, los cuales se encuentran con la función de auto correlación y auto correlación parcial. Una vez se tienen el (p,d,q). Luego se hace la prueba Ljung-Box para poder verificar que los "residuos de la serie" sean ruido blanco, es decir, que son aleatorios y no se relacionan entre sí y esto se debe cumplir si o si para aplicar el arima. Finalemnte, basta con aplicar la función arima() e introducir la serie y los valores obtenidos, además del plazo del pronóstico para obtener los forecast. 
+
+Se hizo exactamente el mismo proceso con los precios de la gasolina, se creó una serie de tiempo con los datos de los precios y luego se sacó la información del triplete (p,d,q) necesario, se aplicaron las mismas pruebas de Dickey-Fuller y de Ljung Box y se aplicó el modelo. 
+
+Al final se toman los promedios de los forecast obtenidos, esto porque en el proyecto se pretendió sacar un promedio simple de cuanto se gastará en cada rubro por mes durante los siguientes 96 meses, no importa tanto el comportamiento mes a mes. 
+
+Por último, se agregaron las últimas tres columnas necesarias con cálculos sencillos como sumar el pago del crédito con la carga o gasolina, para obtener el total de gasto mensual,además de sacar el ingreso necesario para cada vehículo, el cual se tomó como refencia que ese gasto total mensual sea el 20% del salario neto del individuo.
+
+Este 20% lo recomiendan expertos en finanzas como Steven Zamora o Tony Robbins, de hecho se recomienda que sea menor, ya que en el total de deudas no se puede ver comprometido más del 30%, pero en este caso se eleva para ver la gravedad de la situación, esto porque se pusieron a competir los promedios de ingresos con el promedio de salarios reportados a la CCSS de 709073 colones. Se notó, obviamente, que este salario medio reportado es muy inferior a los promedios de ingresos necesarios para adquirir estos vehículos de manera responsable. 
+
+\section {Resultados}
+
+![Proyección Tipo de Cambio](../res/PronosticoTDC.pdf){width=70%}
+
+Promedio de proyeccion del tipo de cambio: 548.6419 colones. 
+
+![Proyección Gasolina](../res/ProyeccionGasolina.pdf){width=70%}
+
+Promedio de proyección de precios de gasolina: 717.6524 colones.
+
+\newpage
+Tabla 1. Data frame de autos eléctricos completo.
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tabular}{lrrrrrrrrrrr}
+\toprule
+Modelo & Precio & Prima & Deuda & Pago.mensual.... & pago.carga & autonomia.km & cargas.por.mes & carga.mensual & pago.credito & gasto.total.mensual & ingresos.necesarios\\
+\midrule
+Geely Geometry E & 22900 & 4580 & 18320 & 280.0164 & 3947.568 & 380 & 3.157895 & 12466.00 & 153628.7 & 166094.7 & 830473.5\\
+Byd Yuan S1 Pro & 29990 & 5998 & 23992 & 366.7114 & 4324.916 & 401 & 2.992519 & 12942.39 & 201193.2 & 214135.6 & 1070678.1\\
+Byd Seagull & 21990 & 4398 & 17592 & 268.8891 & 3913.264 & 405 & 2.962963 & 11594.86 & 147523.8 & 159118.7 & 795593.3\\
+Chery EQ7 & 34990 & 6998 & 27992 & 427.8503 & 5776.256 & 512 & 2.343750 & 13538.10 & 234736.6 & 248274.7 & 1241373.5\\
+Byd yuan plus & 26500 & 5300 & 21200 & 324.0364 & 5338.216 & 480 & 2.500000 & 13345.54 & 177779.9 & 191125.5 & 955627.4\\
+Chery Icar 03 & 29990 & 5998 & 23992 & 366.7114 & 5946.459 & 501 & 2.395210 & 14243.02 & 201193.2 & 215436.2 & 1077181.2\\
+Volvo EX30 & 38000 & 7600 & 30400 & 464.6560 & 5900.280 & 476 & 2.521008 & 14874.66 & 254929.7 & 269804.4 & 1349021.9\\
+Jac EJS4 & 25700 & 5140 & 20560 & 314.2542 & 4976.700 & 385 & 3.116883 & 15511.79 & 172413.0 & 187924.8 & 939623.9\\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+Tabla 2. Data frame de autos gasolina completo. 
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tabular}{lrrrrrrrrrrr}
+\toprule
+Modelo & Precio & Prima & Deuda & Pago.mensual.... & capacidad.litros & kilometraje & rellenos & pago.por.gasolina & pago.credito & gasto.total.mensual & ingresos.necesarios\\
+\midrule
+Toyota RAV4 & 34700 & 6940 & 27760 & 424.3043 & 55 & 440 & 2.727273 & 107647.9 & 232791.1 & 340438.9 & 1702195\\
+Nissan Frontier & 42900 & 8580 & 34320 & 524.5721 & 80 & 640 & 1.875000 & 107647.9 & 287802.2 & 395450.1 & 1977250\\
+Toyota Hilux & 48700 & 9740 & 38960 & 595.4933 & 80 & 640 & 1.875000 & 107647.9 & 326712.6 & 434360.4 & 2171802\\
+Suzuki Vitara & 26490 & 5298 & 21192 & 323.9141 & 47 & 376 & 3.191489 & 107647.9 & 177712.9 & 285360.7 & 1426804\\
+Chery Tiggo 2 & 22490 & 4498 & 17992 & 275.0030 & 50 & 400 & 3.000000 & 107647.9 & 150878.1 & 258526.0 & 1292630\\
+Toyota Raize & 20800 & 4160 & 16640 & 254.3380 & 36 & 288 & 4.166667 & 107647.9 & 139540.5 & 247188.3 & 1235942\\
+Suzuki Jimny & 29990 & 5998 & 23992 & 366.7114 & 40 & 320 & 3.750000 & 107647.9 & 201193.2 & 308841.1 & 1544205\\
+Toyota Yaris Cross & 29900 & 5980 & 23920 & 365.6109 & 42 & 336 & 3.571429 & 107647.9 & 200589.4 & 308237.3 & 1541186\\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+
+Tabla 3. Columnas objetivo autos eléctricos. 
+\begin{tabular}{lrr}
+\toprule
+Modelo & gasto.total.mensual & ingresos.necesarios\\
+\midrule
+Geely Geometry E & 166094.7 & 830473.5\\
+Byd Yuan S1 Pro & 214135.6 & 1070678.1\\
+Byd Seagull & 159118.7 & 795593.3\\
+Chery EQ7 & 248274.7 & 1241373.5\\
+Byd Yuan Plus & 191125.5 & 955627.4\\
+Chery Icar 03 & 215436.2 & 1077181.2\\
+Volvo EX30 & 269804.4 & 1349021.9\\
+Jac EJS4 & 187924.8 & 939623.9\\
+\bottomrule
+\end{tabular}
+\vspace{0.3 cm}
+
+\noindent Promedio gasto total mensual para eléctricos: 206489.3 colones. \newline
+Promedio ingresos necesarios para eléctricos: 1032447 colones. 
+
+\newpage 
+Tabla 4. Columnas objetivo autos gasolina. 
+\begin{tabular}{lrr}
+\toprule
+Modelo & gasto.total.mensual & ingresos.necesarios\\
+\midrule
+Toyota RAV4 & 340438.9 & 1702195\\
+Nissan Frontier & 395450.1 & 1977250\\
+Toyota Hilux & 434360.4 & 2171802\\
+Suzuki Vitara & 285360.7 & 1426804\\
+Chery Tiggo 2 & 258526.0 & 1292630\\
+Toyota Raize & 247188.3 & 1235942\\
+Suzuki Jimny & 308841.1 & 1544205\\
+Toyota Yaris Cross & 308237.3 & 1541186\\
+\bottomrule
+\end{tabular}
+\vspace{0.3 cm}
+
+\noindent Promedio gasto total mensual para gasolina: 322300.4 colones. \newline 
+Promedio ingresos necesarios para gasolina: 1611502 colones.
+
+\section{Conclusiones}
+El costarricense carece mucho de educación financiera a la hora de adquirir un vehículo, el acceso fácil a la deuda con pagos mensuales tan atractivos solo provocan que se adquieran más vehículos sin pensar en el caos vial y financiero que esto representa. El promedio de ingresos reportados a la CCSS es mucho menor que los promedios para adquirir estos vehículos, los cuales son los más comprados, lo que refleja una irresponsabilidad financiera notable.
+
+\section{Recomendaciones}
+Se le insta al costarricense a hacer más uso del transporte público y al Estado a hacer de este un medio seguro y confiable, esto con el objetivo de evitar colocar más autos en las calles que causen caos vial y deudas innecesarias. También, en caso de realmente necesitar uno, se recomienda buscar en el mercado de autos usados carros que se ajusten mejor al presupuesto de cada individuo. 
+
+\newpage
+
+\section{Referencias}
+
+\hangindent=1.27cm \hangafter=1
+Ale Tech. (s. f.). Tarifas de carga. Recuperado de https://alemonterotech.com/tarifas-de-carga/
+
+\hangindent=1.27cm \hangafter=1
+Banco Nacional de Costa Rica. (s. f.). Calculadora de crédito – vehículos. Recuperado de https://n9.cl/gtmehw
+
+\hangindent=1.27cm \hangafter=1
+BYD Costa Rica. (s. f.). Nosotros. Recuperado de https://bydautocr.com/
+
+\hangindent=1.27cm \hangafter=1
+Caja Costarricense de Seguro Social. (s. f.). Estadísticas actuariales. CCSS. Recuperado de https://aissfa.ccss.sa.cr/estadisticas-actuariales
+
+\hangindent=1.27cm \hangafter=1
+Cerón, J. (28 de abril del 2023). Aplicación modelo ARIMA. RPubs. Recuperado de https://rpubs.com/stefens07/Arima
+
+\hangindent=1.27cm \hangafter=1
+Creditea. (2 de agosto del 2025). ¿Cuánto es el enganche de un carro en México? Blog Creditea. Recuperado de https://www.creditea.mx/blog/post/enganche-de-un-carro-mexico
+
+\hangindent=1.27cm \hangafter=1
+Grupo ICE. (s. f.). Tarifas actuales [PDF]. Recuperado de https://www.grupoice.com/wps/wcm/connect/669c79e9-84c9-4682-b63b-136238ebc7e2/Tarifas+actuales.pdf?MOD=AJPERES
+
+\hangindent=1.27cm \hangafter=1
+Lic. Lourdes Cuellar. (31 de mayo del 2020). ARIMA en RStudio, series de tiempo [Video]. YouTube. https://www.youtube.com/watch?v=PBcdIK5oKtQ&t=2s
+
+\hangindent=1.27cm \hangafter=1
+RECOPE. (s. f.). Precios nacionales históricos de combustibles. Recuperado de https://www.recope.go.cr/productos/precios-nacionales/historicos/
+
+\hangindent=1.27cm \hangafter=1
+Robbins, T. (2018). Dinero: domina el juego — Cómo alcanzar la libertad financiera en 7 pasos. Deusto.
+
+\hangindent=1.27cm \hangafter=1
+USD/CRC - Dólar Colón costarricense (datos históricos). (s. f.). Investing.com. Recuperado de https://es.investing.com/currencies/usd-crc-historical-data
+
+
+

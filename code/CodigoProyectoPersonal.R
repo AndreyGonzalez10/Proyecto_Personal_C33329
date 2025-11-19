@@ -175,7 +175,6 @@ df.dataframe.electricos <- df.dataframe.electricos %>% mutate(
   cargas.por.mes = 1200/autonomia.km
 )
 
-View(df.dataframe.electricos)
 
 
 #Costo por cargas mensuales
@@ -241,7 +240,7 @@ library(seasonal) #para la serie ajustada de estacionalidad
 #Se hace datos.dolar como una serie de tiempo
 
 serie.dolar <- ts(datos.dolar$Último, start=c(2015,3), frequency = 12)
-
+ |
 
 #Se grafica el tipo de cambio por 10 años
 
@@ -283,10 +282,6 @@ par(mfrow= c(1,1))
 acf(dolar.d1,lag.max = 120, main="Figura 4. Función de autocorrelación TDC diferenciado")
 pacf(dolar.d1,lag.max = 120, main="Figura 5. Función de autocorrelación parcial TDC diferenciado")
 
-
-
-#Después de 1000 pruebas se escoge el modelo ARIMA (0,1,3) ya que el residuo es ruido blanco
-    
 auto.arima(serie.dolar)
 
 Modelo.arima <-  Arima(serie.dolar, order = c(1,1,2), include.drift = TRUE)
@@ -425,6 +420,7 @@ pronostico.tc.df <- as.data.frame(pronostico96)
 #Obtenemos el promedio del tipo de cambio pronosticado y lo que se pagará en colones
 
 promedio.tdc <- mean(pronostico.tc.df$`Point Forecast`)
+promedio.tdc
 
 
 df.dataframe.electricos <- df.dataframe.electricos %>% mutate(
@@ -465,5 +461,27 @@ df.dataframe.gasolina <- df.dataframe.gasolina %>%
 
 View(df.dataframe.electricos)
 View(df.dataframe.gasolina)
+
+#Se van a generar los df para la presentación
+
+library(knitr)
+
+kable(df.dataframe.electricos, format="latex", booktabs=TRUE)
+kable(df.dataframe.gasolina, format = "latex", booktabs = TRUE)
+
+df.resumen1 <- df.dataframe.electricos[, c("Modelo", "gasto.total.mensual", "ingresos.necesarios")]
+kable(df.resumen1, format= "latex", booktabs=TRUE)
+
+df.resumen2 <- df.dataframe.gasolina[, c("Modelo", "gasto.total.mensual", "ingresos.necesarios")]
+kable(df.resumen2, format= "latex", booktabs=TRUE)
+
+#Sacamos resultados para el escrito y la presentación
+
+mean(df.dataframe.electricos$gasto.total.mensual)
+mean(df.dataframe.electricos$ingresos.necesarios)
+
+
+mean(df.dataframe.gasolina$gasto.total.mensual)
+mean(df.dataframe.gasolina$ingresos.necesarios)
 
 
